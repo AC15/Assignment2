@@ -1,10 +1,14 @@
 package clock;
 
+import queuemanager.PriorityQueue;
+import queuemanager.SortedLinkedPriorityQueue;
+
 import java.util.Calendar;
 import java.util.Observable;
-//import java.util.GregorianCalendar;
 
 public class Model extends Observable {
+
+    PriorityQueue priorityQueue = new SortedLinkedPriorityQueue();
     
     int hour = 0;
     int minute = 0;
