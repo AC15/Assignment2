@@ -13,4 +13,9 @@ public class Alarm {
     public long getDateInMilliseconds() {
         return dateInMilliseconds;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(getDateInMilliseconds());
+    }
 }
