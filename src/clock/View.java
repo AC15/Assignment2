@@ -3,6 +3,8 @@ package clock;
 import queuemanager.QueueUnderflowException;
 import java.awt.*;
 import javax.swing.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -13,15 +15,22 @@ public class View implements Observer {
     
     private ClockPanel panel;
     private JFrame frame;
-    private Model model;
 
     public View(Model model) {
-        this.model = model;
         frame = new JFrame();
         panel = new ClockPanel(model);
-        //frame.setContentPane(panel);
         frame.setTitle("Java Clock");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Event listener that prompts user to save the alarms when he exits the program.
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                AlarmClock.saveICalendar();
+                frame.dispose();
+                System.exit(0);
+            }
+        });
 
         Container pane = frame.getContentPane();
 
@@ -64,14 +73,27 @@ public class View implements Observer {
         JMenuItem editItem = new JMenuItem("Edit");
         editItem.setMnemonic('e');
         editItem.addActionListener(e -> {
-                    try {
-                        editAlarmDialogue();
-                    } catch (QueueUnderflowException e1) {
-                        e1.printStackTrace();
-                    }
+                try {
+                    editAlarmDialogue();
+                } catch (QueueUnderflowException e1) {
+                    e1.printStackTrace();
                 }
-        );
+        });
         alarmMenu.add(editItem);
+
+        JMenuItem loadItem = new JMenuItem("Load");
+        loadItem.setMnemonic('l');
+        loadItem.addActionListener(e ->
+                AlarmClock.loadICalendar()
+        );
+        alarmMenu.add(loadItem);
+
+        JMenuItem saveItem = new JMenuItem("Save");
+        saveItem.setMnemonic('s');
+        saveItem.addActionListener(e ->
+                AlarmClock.saveICalendar()
+        );
+        alarmMenu.add(saveItem);
 
         menuBar.add(alarmMenu);
     }
@@ -84,7 +106,7 @@ public class View implements Observer {
         SpinnerNumberModel modelHours = new SpinnerNumberModel(0, 0, 23, 1);
         SpinnerNumberModel modelMinutes = new SpinnerNumberModel(0, 0, 59, 1);
 
-        Long[] priorityArray = model.priorityQueue.getPriorityArray();
+        Long[] priorityArray = AlarmClock.getPriorityArray();
         String[] labels = new String[priorityArray.length];
 
         for (int i = 0; i < priorityArray.length; i++) {
@@ -106,20 +128,20 @@ public class View implements Observer {
         JSpinner minutes = new JSpinner(modelMinutes);
 
         alarmList.addActionListener(e -> {
-            int position = alarmList.getSelectedIndex();
-            Long dateInMilliseconds = priorityArray[position];
-            int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
-            int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
+                int position = alarmList.getSelectedIndex();
+                Long dateInMilliseconds = priorityArray[position];
+                int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
+                int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
 
-            if (hour == 24) {
-                hour = 0;
-            }
+                if (hour == 24) {
+                    hour = 0;
+                }
 
-            hours.setValue(hour);
-            minutes.setValue(minute);
+                hours.setValue(hour);
+                minutes.setValue(minute);
         });
 
-        if (!model.priorityQueue.isEmpty()) {
+        if (!AlarmClock.isEmpty()) {
             alarmList.setSelectedIndex(0); // runs the event listener for first item
         }
 
@@ -139,14 +161,14 @@ public class View implements Observer {
         int result = JOptionPane.showOptionDialog(null, inputs, "Edit Alarm",
                 JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, 0);
         if (result == JOptionPane.YES_OPTION) {
-            model.priorityQueue.remove(alarmList.getSelectedIndex());
+            AlarmClock.remove(alarmList.getSelectedIndex());
         } else if (result == JOptionPane.NO_OPTION) {
-            model.priorityQueue.remove(alarmList.getSelectedIndex());
+            AlarmClock.remove(alarmList.getSelectedIndex());
 
             int hour = (int) hours.getValue();
             int minute = (int) minutes.getValue();
 
-            addAlarm(hour, minute);
+            AlarmClock.addAlarm(hour, minute);
         }
     }
 
@@ -161,7 +183,7 @@ public class View implements Observer {
         JSpinner hours = new JSpinner(modelHours);
         JSpinner minutes = new JSpinner(modelMinutes);
 
-        final JComponent[] inputs = new JComponent[]{
+        final JComponent[] inputs = new JComponent[] {
                 new JLabel("Hours"),
                 hours,
                 new JLabel("Minutes"),
@@ -174,46 +196,8 @@ public class View implements Observer {
             int hour = (int) hours.getValue();
             int minute = (int) minutes.getValue();
 
-            addAlarm(hour, minute);
+            AlarmClock.addAlarm(hour, minute);
         }
-    }
-
-    /**
-     * Adds an alarm to the queue.
-     *
-     * @param hour Hour of the alarm.
-     * @param minute Minute of the alarm.
-     */
-    private void addAlarm(int hour, int minute) {
-        long dateInMilliseconds = getDateInMillisecondsForAlarm(hour, minute);
-
-        Alarm alarm = new Alarm(dateInMilliseconds);
-        model.priorityQueue.add(alarm, dateInMilliseconds);
-    }
-
-    /**
-     * Returns a date in milliseconds for the alarm.
-     *
-     * @param hour Alarm's hour.
-     * @param minute Alarm's minute.
-     * @return Date in milliseconds for the alarm.
-     */
-    private long getDateInMillisecondsForAlarm(int hour, int minute) {
-        LocalDateTime currentDate = LocalDateTime.now();
-
-        // if the alarm date will be set in the past, add one day to the date
-        if (currentDate.getHour() >= hour && currentDate.getMinute() >= minute) {
-            currentDate = LocalDateTime.from(currentDate).plusDays(1);
-        }
-
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        String formattedDate = dtf.format(currentDate);
-        String myDate = String.format("%s %02d:%02d:00", formattedDate, hour, minute);
-
-        return LocalDateTime.parse(myDate, DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"))
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli();
     }
 
     /**
