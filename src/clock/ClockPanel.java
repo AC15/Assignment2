@@ -1,7 +1,8 @@
 package clock;
 
+import queuemanager.QueueUnderflowException;
+
 import java.awt.*;
-import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.font.*;
 import javax.swing.*;
@@ -37,7 +38,6 @@ public class ClockPanel extends JPanel {
         
         double radius = 0;
         double theta = 0;
-        
         // Draw the tick marks around the outside
         for (int n = 0; n < 60; n++) {
             theta = (90 - n * 6) / (180 / Math.PI);
@@ -53,7 +53,6 @@ public class ClockPanel extends JPanel {
             double y2 = y0 - radius * Math.sin(theta);
             gg.draw(new Line2D.Double(x1, y1, x2, y2));
         }
-        
         // Draw the numbers
         // Font font = new Font("SansSerif", Font.BOLD, size / 5);
         Font font = new Font("SansSerif", Font.PLAIN, size / 5);
@@ -72,11 +71,9 @@ public class ClockPanel extends JPanel {
             double descent = msgbounds.getHeight() + msgbounds.getY();
             double height = msgbounds.getHeight();
             double width = msgbounds.getWidth();
-            
-            gg.drawString(s, (new Float(x1 - width/2)).floatValue(), 
-                          (new Float(y1 + height/2 - descent)).floatValue());
+            gg.drawString(s, new Float(x1 - width / 2),
+                    new Float(y1 + height / 2 - descent));
         }
-        
         // Draw the hour hand
         gg.setStroke(new BasicStroke(2.0f));
         theta = (90 - (model.hour + model.minute / 60.0) * 30) / (180 / Math.PI);
@@ -100,5 +97,25 @@ public class ClockPanel extends JPanel {
         x1 = x0 + radius * Math.cos(theta);
         y1 = y0 - radius * Math.sin(theta);
         gg.draw(new Line2D.Double(x0, y0, x1, y1));
+
+        // Draw the next alarm hand
+        try {
+            Long dateInMilliseconds = Long.valueOf(AlarmClock.getHead());
+
+            if (dateInMilliseconds != 0) {
+                int hours = AlarmClock.millisecondsToHours(dateInMilliseconds);
+                int minutes = AlarmClock.millisecondsToMinutes(dateInMilliseconds);
+
+                gg.setColor(Color.red);
+                gg.setStroke(new BasicStroke(0.5f));
+                theta = (90 - (hours + minutes / 60.0) * 30) / (180 / Math.PI);
+                radius = 0.5 * size;
+                x1 = x0 + radius * Math.cos(theta);
+                y1 = y0 - radius * Math.sin(theta);
+                gg.draw(new Line2D.Double(x0, y0, x1, y1));
+            }
+        } catch (QueueUnderflowException e) {
+            e.printStackTrace();
+        }
     }
 }

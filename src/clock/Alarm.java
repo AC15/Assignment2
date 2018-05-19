@@ -1,7 +1,9 @@
 package clock;
 
 /**
- * Created by AC15 on 24/04/2018
+ * Created by Aleksander Czarnowski on 24/04/2018
+ *
+ * An alarm object.
  */
 public class Alarm {
     private long dateInMilliseconds;

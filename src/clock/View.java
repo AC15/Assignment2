@@ -5,9 +5,6 @@ import java.awt.*;
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Observer;
 import java.util.Observable;
 
@@ -22,7 +19,7 @@ public class View implements Observer {
         frame.setTitle("Java Clock");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Event listener that prompts user to save the alarms when he exits the program.
+        // Event listener that prompts the user to save the alarms when he exits the program.
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -55,7 +52,10 @@ public class View implements Observer {
 
     /**
      * Adds an Alarm menu to the menu bar.
-     * When an Add Alarm item is clicked a dialog box appears to add an alarm.
+     * When an Add item is clicked a dialog box appears to add an alarm.
+     * When an Edit item is clicked a dialog box appears to edit an alarm.
+     * When a Load item is clicked a dialog box appears to load alarms from a file.
+     * When a Save item is clicked a dialog box appears to save alarms to a file.
      *
      * @param menuBar Menu bar to which the alarm menu will be attached.
      */
@@ -99,8 +99,8 @@ public class View implements Observer {
     }
 
     /**
-     * A dialogue box allowing users to add an alarm to the queue.
-     * If user selects a wrong hour or minute value it will be replaced with a 0.
+     * A dialogue box allowing users to edit selected alarm from the queue.
+     * If user selects a wrong hour or minute value, it will be replaced with a 0.
      */
     private void editAlarmDialogue() throws QueueUnderflowException {
         SpinnerNumberModel modelHours = new SpinnerNumberModel(0, 0, 23, 1);
@@ -109,42 +109,36 @@ public class View implements Observer {
         Long[] priorityArray = AlarmClock.getPriorityArray();
         String[] labels = new String[priorityArray.length];
 
+        // create and add labels to the labels array
         for (int i = 0; i < priorityArray.length; i++) {
-            Long dateInMilliseconds = priorityArray[i];
-            int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
-            int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
-
-            if (hour == 24) {
-                hour = 0;
-            }
+            long dateInMilliseconds = priorityArray[i];
+            int hour = AlarmClock.millisecondsToHours(dateInMilliseconds);
+            int minute = AlarmClock.millisecondsToMinutes(dateInMilliseconds);
 
             String label = String.format("%02d:%02d", hour, minute);
             labels[i] = label;
         }
 
         JComboBox alarmList = new JComboBox(labels);
-
         JSpinner hours = new JSpinner(modelHours);
         JSpinner minutes = new JSpinner(modelMinutes);
 
+        // action listener to input hours and minutes of selected alarm to JSpinner fields
         alarmList.addActionListener(e -> {
                 int position = alarmList.getSelectedIndex();
-                Long dateInMilliseconds = priorityArray[position];
-                int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
-                int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
-
-                if (hour == 24) {
-                    hour = 0;
-                }
+                long dateInMilliseconds = priorityArray[position];
+                int hour = AlarmClock.millisecondsToHours(dateInMilliseconds);
+                int minute = AlarmClock.millisecondsToMinutes(dateInMilliseconds);
 
                 hours.setValue(hour);
                 minutes.setValue(minute);
         });
 
         if (!AlarmClock.isEmpty()) {
-            alarmList.setSelectedIndex(0); // runs the event listener for first item
+            alarmList.setSelectedIndex(0); // runs the event listener for the first item
         }
 
+        // custom names of the buttons
         Object[] options = {"Delete",
                 "Edit",
                 "Cancel"};
@@ -160,15 +154,16 @@ public class View implements Observer {
 
         int result = JOptionPane.showOptionDialog(null, inputs, "Edit Alarm",
                 JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, 0);
-        if (result == JOptionPane.YES_OPTION) {
+
+        if (result == JOptionPane.YES_OPTION) { // deletes the alarm when user clicks on Delete button
             AlarmClock.remove(alarmList.getSelectedIndex());
-        } else if (result == JOptionPane.NO_OPTION) {
-            AlarmClock.remove(alarmList.getSelectedIndex());
+        } else if (result == JOptionPane.NO_OPTION) { // edits the alarm when user clicks on Edit button
+            AlarmClock.remove(alarmList.getSelectedIndex()); // removes the chosen alarm
 
             int hour = (int) hours.getValue();
             int minute = (int) minutes.getValue();
 
-            AlarmClock.addAlarm(hour, minute);
+            AlarmClock.addAlarm(hour, minute); // adds a new edited alarm
         }
     }
 

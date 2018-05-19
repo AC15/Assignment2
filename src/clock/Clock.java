@@ -7,6 +7,6 @@ public class Clock {
         View view = new View(model);
         model.addObserver(view);
         Controller controller = new Controller(model, view);
-        AlarmClock.loadICalendar();
+        AlarmClock.loadICalendar(); // opens up s dialogue box to load the alarms when started
     }
 }

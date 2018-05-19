@@ -20,11 +20,12 @@ import java.util.Date;
 import java.util.Scanner;
 
 /**
+ * Created by Aleksander Czarnowski on 19/04/2018
+ *
  * Alarm Clock class contains all functionality related to managing the alarms.
  */
 class AlarmClock {
     private static PriorityQueue priorityQueue = new SortedLinkedPriorityQueue();
-
     private static SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
 
     /**
@@ -38,13 +39,10 @@ class AlarmClock {
         }
 
         long dateInMilliseconds = Long.parseLong(priorityQueue.head().toString());
-        int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
-        int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
+        int hour = millisecondsToHours(dateInMilliseconds);
+        int minute = millisecondsToMinutes(dateInMilliseconds);
 
-        if (hour == 24) {
-            hour = 0;
-        }
-
+        // activates the alarm and removes it from the queue when the time is right
         if (currentHour == hour && currentMinute == minute) {
             priorityQueue.remove();
             JOptionPane.showMessageDialog(null, "Alarm activated.",
@@ -81,7 +79,7 @@ class AlarmClock {
     }
 
     /**
-     * Saves iCalendar file to the disk.
+     * A dialogue box allowing users to save the iCalendar file to the disk.
      */
     static void saveICalendar() {
         String iCalendar = generateICalendar();
@@ -101,7 +99,7 @@ class AlarmClock {
     }
 
     /**
-     * Generate priority queue from the loaded iCalendar file.
+     * A dialogue box allowing users to load the alarms from an iCalendar file.
      * Alarms from the past are not loaded to the priority queue.
      */
     static void loadICalendar() {
@@ -121,8 +119,7 @@ class AlarmClock {
                         long dateInMilliseconds = date.getTime();
 
                         if (dateInMilliseconds > datestamp) {
-                            Alarm alarm = new Alarm(dateInMilliseconds);
-                            priorityQueue.add(alarm, dateInMilliseconds);
+                            addAlarm(dateInMilliseconds);
                         }
                     }
                 }
@@ -145,6 +142,15 @@ class AlarmClock {
     static void addAlarm(int hour, int minute) {
         long dateInMilliseconds = AlarmClock.getDateInMillisecondsForAlarm(hour, minute);
 
+        addAlarm(dateInMilliseconds);
+    }
+
+    /**
+     * Adds an alarm to the queue.
+     *
+     * @param dateInMilliseconds Date in milliseconds of the alarm.
+     */
+    static void addAlarm(long dateInMilliseconds) {
         Alarm alarm = new Alarm(dateInMilliseconds);
         priorityQueue.add(alarm, dateInMilliseconds);
     }
@@ -202,9 +208,45 @@ class AlarmClock {
     }
 
     /**
+     * Returns a head of the queue.
+     *
+     * @return A head of the queue.
+     * @throws QueueUnderflowException Thrown when queue is empty.
+     */
+    static String getHead() throws QueueUnderflowException {
+        if (isEmpty()) {
+            return "0";
+        }
+
+        return priorityQueue.head().toString();
+    }
+
+    /**
      * Removes item from selected position from the queue.
      */
     static void remove(int position) throws QueueUnderflowException {
         priorityQueue.remove(position);
+    }
+
+    /**
+     * Converts date in milliseconds to hours.
+     *
+     * @param dateInMilliseconds A date in milliseconds.
+     * @return Hours.
+     */
+    static int millisecondsToHours(long dateInMilliseconds) {
+        int hours = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
+
+        return (hours == 24) ? 0 : hours;
+    }
+
+    /**
+     * Converts date in milliseconds to minutes.
+     *
+     * @param dateInMilliseconds A date in milliseconds.
+     * @return Minutes.
+     */
+    static int millisecondsToMinutes(long dateInMilliseconds) {
+        return (int) (dateInMilliseconds / (1000 * 60)) % 60;
     }
 }
