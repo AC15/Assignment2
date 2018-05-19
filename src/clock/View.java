@@ -1,5 +1,7 @@
 package clock;
 
+import queuemanager.QueueUnderflowException;
+
 import java.awt.*;
 import javax.swing.*;
 import java.time.LocalDateTime;
@@ -47,7 +49,7 @@ public class View implements Observer {
      * Adds an Alarm menu to the menu bar.
      * When an Add Alarm item is clicked a dialog box appears to add an alarm.
      *
-     * @param menuBar Menu bar to which the about menu will be attached.
+     * @param menuBar Menu bar to which the alarm menu will be attached.
      */
     private void addAlarmMenu(JMenuBar menuBar) {
         JMenu alarmMenu = new JMenu("Alarm");
@@ -60,7 +62,85 @@ public class View implements Observer {
         );
         alarmMenu.add(aboutItem);
 
+        JMenuItem editItem = new JMenuItem("Edit");
+        editItem.setMnemonic('e');
+        editItem.addActionListener(e -> {
+                    try {
+                        editAlarmDialogue();
+                    } catch (QueueUnderflowException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+        );
+        alarmMenu.add(editItem);
+
         menuBar.add(alarmMenu);
+    }
+
+    /**
+     * A dialogue box allowing users to add an alarm to the queue.
+     * If user selects a wrong hour or minute value it will be replaced with a 0.
+     */
+    private void editAlarmDialogue() throws QueueUnderflowException {
+        SpinnerNumberModel modelHours = new SpinnerNumberModel(0, 0, 23, 1);
+        SpinnerNumberModel modelMinutes = new SpinnerNumberModel(0, 0, 59, 1);
+
+        Long[] priorityArray = model.priorityQueue.getPriorityArray();
+        String[] labels = new String[priorityArray.length];
+
+        for (int i = 0; i < priorityArray.length; i++) {
+            Long dateInMilliseconds = priorityArray[i];
+            int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
+            int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
+
+            String label = String.format("%02d:%02d", hour, minute);
+            labels[i] = label;
+        }
+
+        JComboBox alarmList = new JComboBox(labels);
+
+        JSpinner hours = new JSpinner(modelHours);
+        JSpinner minutes = new JSpinner(modelMinutes);
+
+        alarmList.addActionListener(e -> {
+            int position = alarmList.getSelectedIndex();
+            Long dateInMilliseconds = priorityArray[position];
+            int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
+            int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
+
+            hours.setValue(hour);
+            minutes.setValue(minute);
+        });
+
+        if (!model.priorityQueue.isEmpty()) {
+            alarmList.setSelectedIndex(0); // runs the event listener for first item
+        }
+
+        Object[] options = {"Delete",
+                "Edit",
+                "Cancel"};
+
+        final JComponent[] inputs = new JComponent[]{
+                new JLabel("Select Alarm"),
+                alarmList,
+                new JLabel("Hours"),
+                hours,
+                new JLabel("Minutes"),
+                minutes
+        };
+
+        int result = JOptionPane.showOptionDialog(null, inputs, "Edit Alarm",
+                JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, 0);
+        if (result == JOptionPane.YES_OPTION) {
+            model.priorityQueue.remove(alarmList.getSelectedIndex());
+        } else if (result == JOptionPane.NO_OPTION) {
+            model.priorityQueue.remove(alarmList.getSelectedIndex());
+
+            int hour = (int) hours.getValue();
+            int minute = (int) minutes.getValue();
+
+            addAlarm(hour, minute);
+        }
     }
 
     /**
@@ -87,11 +167,21 @@ public class View implements Observer {
             int hour = (int) hours.getValue();
             int minute = (int) minutes.getValue();
 
-            long dateInMilliseconds = getDateInMillisecondsForAlarm(hour, minute);
-
-            Alarm alarm = new Alarm(dateInMilliseconds);
-            model.priorityQueue.add(alarm, dateInMilliseconds);
+            addAlarm(hour, minute);
         }
+    }
+
+    /**
+     * Adds an alarm to the queue.
+     *
+     * @param hour Hour of the alarm.
+     * @param minute Minute of the alarm.
+     */
+    private void addAlarm(int hour, int minute) {
+        long dateInMilliseconds = getDateInMillisecondsForAlarm(hour, minute);
+
+        Alarm alarm = new Alarm(dateInMilliseconds);
+        model.priorityQueue.add(alarm, dateInMilliseconds);
     }
 
     /**
