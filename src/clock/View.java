@@ -1,7 +1,6 @@
 package clock;
 
 import queuemanager.QueueUnderflowException;
-
 import java.awt.*;
 import javax.swing.*;
 import java.time.LocalDateTime;
@@ -93,6 +92,10 @@ public class View implements Observer {
             int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
             int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
 
+            if (hour == 24) {
+                hour = 0;
+            }
+
             String label = String.format("%02d:%02d", hour, minute);
             labels[i] = label;
         }
@@ -107,6 +110,10 @@ public class View implements Observer {
             Long dateInMilliseconds = priorityArray[position];
             int hour = (int) (dateInMilliseconds / (1000 * 60 * 60)) % 24 + 1;
             int minute = (int) (dateInMilliseconds / (1000 * 60)) % 60;
+
+            if (hour == 24) {
+                hour = 0;
+            }
 
             hours.setValue(hour);
             minutes.setValue(minute);
