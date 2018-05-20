@@ -12,6 +12,8 @@ public class View implements Observer {
     
     private ClockPanel panel;
     private JFrame frame;
+    private JMenuItem editItem;
+    private JMenuItem saveItem;
 
     public View(Model model) {
         frame = new JFrame();
@@ -23,7 +25,9 @@ public class View implements Observer {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                AlarmClock.saveICalendar();
+                if (!AlarmClock.isEmpty()) {
+                    AlarmClock.saveICalendar();
+                }
                 frame.dispose();
                 System.exit(0);
             }
@@ -70,7 +74,7 @@ public class View implements Observer {
         );
         alarmMenu.add(aboutItem);
 
-        JMenuItem editItem = new JMenuItem("Edit");
+        editItem = new JMenuItem("Edit");
         editItem.setMnemonic('e');
         editItem.addActionListener(e -> {
                 try {
@@ -88,7 +92,7 @@ public class View implements Observer {
         );
         alarmMenu.add(loadItem);
 
-        JMenuItem saveItem = new JMenuItem("Save");
+        saveItem = new JMenuItem("Save");
         saveItem.setMnemonic('s');
         saveItem.addActionListener(e ->
                 AlarmClock.saveICalendar()
@@ -219,5 +223,14 @@ public class View implements Observer {
     
     public void update(Observable o, Object arg) {
         panel.repaint();
+
+        // disables the save and edit menu items when there are no alarms in the queue
+        if (AlarmClock.isEmpty()) {
+            saveItem.setEnabled(false);
+            editItem.setEnabled(false);
+        } else {
+            saveItem.setEnabled(true);
+            editItem.setEnabled(true);
+        }
     }
 }

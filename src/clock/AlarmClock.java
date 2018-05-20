@@ -25,7 +25,7 @@ import java.util.Scanner;
  * Alarm Clock class contains all functionality related to managing the alarms.
  */
 class AlarmClock {
-    private static PriorityQueue priorityQueue = new SortedLinkedPriorityQueue();
+    static PriorityQueue priorityQueue = new SortedLinkedPriorityQueue();
     private static SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
 
     /**
